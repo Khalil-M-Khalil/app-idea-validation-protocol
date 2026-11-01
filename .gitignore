@@ -1,0 +1,35 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor & IDE Directories
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# Environment Variables & Secrets
+.env
+.env.*
+*.pem
+*.key
+*.token
+credentials.json
+
+# Temporary & Build Artifacts
+*.tmp
+*.bak
+*.log
+scratch/
+dist/
+build/
+
+# Node / Python Artifacts (if testing scripts added)
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/

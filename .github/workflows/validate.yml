@@ -1,0 +1,93 @@
+name: Validate Protocol Structure & Skill
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate:
+    name: Structure & Content Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run Integrity Checks
+        run: |
+          python - << 'EOF'
+          import sys
+          import os
+          import re
+          from pathlib import Path
+
+          errors = []
+
+          # 1. Required Files Verification
+          required_files = [
+              "README.md",
+              "README.ar.md",
+              "SKILL.md",
+              "LICENSE",
+              "CONTRIBUTING.md",
+              "SECURITY.md",
+              "CHANGELOG.md",
+              ".gitignore",
+              ".gitattributes",
+              "references/KHALIL_COLDSTART_PROTOCOL.md",
+              "docs/methodology.md",
+              "docs/decision-gates.md",
+              "docs/evidence-standards.md",
+              "docs/source-verification.md",
+          ]
+
+          for rf in required_files:
+              p = Path(rf)
+              if not p.is_file():
+                  errors.append(f"Missing required file: {rf}")
+
+          # 2. SKILL.md Frontmatter Validation
+          skill_path = Path("SKILL.md")
+          if skill_path.is_file():
+              content = skill_path.read_text(encoding="utf-8")
+              if not content.startswith("---"):
+                  errors.append("SKILL.md must start with YAML frontmatter delimiter (---)")
+              else:
+                  parts = content.split("---", 2)
+                  if len(parts) < 3:
+                      errors.append("SKILL.md YAML frontmatter is not properly closed with (---)")
+                  else:
+                      fm = parts[1]
+                      if "name:" not in fm:
+                          errors.append("SKILL.md frontmatter missing 'name' field")
+                      if "description:" not in fm:
+                          errors.append("SKILL.md frontmatter missing 'description' field")
+
+          # 3. Check for obvious accidental secret patterns
+          secret_regex = re.compile(r"(ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}|sk-[a-zA-Z0-9]{32,})")
+          for root, dirs, files in os.walk("."):
+              if ".git" in dirs:
+                  dirs.remove(".git")
+              for file in files:
+                  fp = Path(root) / file
+                  try:
+                      text = fp.read_text(encoding="utf-8", errors="ignore")
+                      if secret_regex.search(text):
+                          errors.append(f"Potential API token detected in {fp}")
+                  except Exception:
+                      pass
+
+          if errors:
+              print("Validation failed with errors:")
+              for err in errors:
+                  print(f"  - {err}")
+              sys.exit(1)
+
+          print("All structural and skill validation checks passed successfully!")
+          EOF
